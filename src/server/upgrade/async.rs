@@ -20,6 +20,8 @@ use std::io::{self, ErrorKind};
 use stream::async::Stream;
 use tokio_codec::{Decoder, Framed, FramedParts};
 use ws::util::update_framed_codec;
+use tokio_io::AsyncRead;
+use tokio_io::AsyncWrite;
 
 /// An asynchronous websocket upgrade.
 ///
@@ -69,7 +71,7 @@ pub type Upgrade<S> = WsUpgrade<S, BytesMut>;
 /// module under the name `Upgrade`.
 impl<S> WsUpgrade<S, BytesMut>
 where
-	S: Stream + Send + 'static,
+	S: AsyncRead + AsyncWrite + Send + 'static,
 {
 	/// Asynchronously accept the websocket handshake, then create a client.
 	/// This will asynchronously send a response accepting the connection
@@ -116,7 +118,7 @@ where
 	/// Asynchronously send a rejection message and deconstruct `self`
 	/// into it's original stream. The stream being returned is framed with the
 	/// `HttpServerCodec` since that was used to send the rejection message.
-	pub fn reject(self) -> SinkSend<Framed<S, HttpServerCodec>> {
+	pub fn reject(self)  {
 		self.internal_reject(None)
 	}
 
@@ -124,14 +126,14 @@ where
 	/// deconstruct `self` into it's original stream.
 	///  The stream being returned is framed with the
 	/// `HttpServerCodec` since that was used to send the rejection message.
-	pub fn reject_with(self, headers: &Headers) -> SinkSend<Framed<S, HttpServerCodec>> {
+	pub fn reject_with(self, headers: &Headers)  {
 		self.internal_reject(Some(headers))
 	}
 
 	fn internal_reject(
 		mut self,
 		headers: Option<&Headers>,
-	) -> SinkSend<Framed<S, HttpServerCodec>> {
+	) {
 		if let Some(custom) = headers {
 			self.headers.extend(custom.iter());
 		}
@@ -206,7 +208,7 @@ pub trait IntoWs {
 	///
 	/// Note: this is the asynchronous version, meaning it will not block when
 	/// trying to read a request.
-	fn into_ws(self) -> Box<Future<Item = Upgrade<Self::Stream>, Error = Self::Error> + Send>;
+	fn into_ws(self) -> Box<Future<Output= Result<Upgrade<Self::Stream>, Self::Error>> + Send>;
 }
 
 impl<S> IntoWs for S
@@ -216,7 +218,7 @@ where
 	type Stream = S;
 	type Error = (S, Option<Request>, BytesMut, HyperIntoWsError);
 
-	fn into_ws(self) -> Box<Future<Item = Upgrade<Self::Stream>, Error = Self::Error> + Send> {
+	fn into_ws(self) -> Box<Future<Output = Result<Upgrade<Self::Stream>, Self::Error>> + Send> {
 		let future = HttpServerCodec
 			.framed(self)
 			.into_future()

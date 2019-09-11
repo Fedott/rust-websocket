@@ -9,8 +9,8 @@ use std;
 use std::io;
 use std::net::SocketAddr;
 use std::net::ToSocketAddrs;
-pub use tokio_reactor::Handle;
-use tokio_tcp::{TcpListener, TcpStream};
+pub use tokio_net::driver::Handle;
+use tokio_net::tcp::{TcpListener, TcpStream};
 
 #[cfg(any(feature = "async-ssl"))]
 use native_tls::TlsAcceptor;
@@ -27,7 +27,7 @@ pub type Server<S> = WsServer<S, TcpListener>;
 /// struct which lets the user decide whether to turn the connection into a websocket
 /// connection or reject it.
 pub type Incoming<S> =
-	Box<Stream<Item = (Upgrade<S>, SocketAddr), Error = InvalidConnection<S, BytesMut>> + Send>;
+	Box<Stream<Item = Result<(Upgrade<S>, SocketAddr), InvalidConnection<S, BytesMut>>> + Send>;
 
 impl<S> WsServer<S, TcpListener>
 where

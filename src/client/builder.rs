@@ -46,11 +46,11 @@ mod async_imports {
 	pub use codec::ws::{Context, MessageCodec};
 	pub use futures::future;
 	pub use futures::Stream as FutureStream;
-	pub use futures::{Future, IntoFuture, Sink};
+	pub use futures::{Future, Sink};
 	pub use tokio_codec::FramedParts;
 	pub use tokio_codec::{Decoder, Framed};
-	pub use tokio_reactor::Handle;
-	pub use tokio_tcp::TcpStream as TcpStreamNew;
+	pub use tokio_net::driver::Handle;
+	pub use tokio_net::tcp::TcpStream as TcpStreamNew;
 	#[cfg(feature = "async-ssl")]
 	pub use tokio_tls::TlsConnector as TlsConnectorExt;
 	pub use ws::util::update_framed_codec;
@@ -783,7 +783,7 @@ impl<'u> ClientBuilder<'u> {
 	fn async_tcpstream(
 		&self,
 		secure: Option<bool>,
-	) -> Box<future::Future<Item = TcpStreamNew, Error = WebSocketError> + Send> {
+	) -> Box<future::Future<Output = Result<TcpStreamNew, WebSocketError>> + Send> {
 		// get the address to connect to, return an error future if ther's a problem
 		let address = match self
 			.extract_host_port(secure)
